@@ -81,7 +81,9 @@ async function setupCircuits() {
     // 2a) circom compile -> r1cs + wasm
     console.log(`  🧱 Compiling ${circuitName}...`);
     // MINIMAL CHANGE: use the resolved binary instead of bare "circom"
-    sh(`"${CIRCOM}" "${circuitPath}" --r1cs --wasm --output "${circuitBuildDir}" -l node_modules`, {
+    // Use absolute path for include directory to ensure circom can find dependencies
+    const nodeModulesPath = path.join(repoRoot, 'node_modules');
+    sh(`"${CIRCOM}" "${circuitPath}" --r1cs --wasm --output "${circuitBuildDir}" -l "${nodeModulesPath}"`, {
       cwd: repoRoot,
     });
     console.log(`  ✅ ${circuitName} compiled`);
