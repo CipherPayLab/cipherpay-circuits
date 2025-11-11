@@ -10,8 +10,8 @@ const path = require('path');
 const fileURLToPath = require('url').fileURLToPath;
 
 // Source and destination paths
-const CIRCUITS_BUILD_DIR = '/home/sean/cipherpay-circuits/build';
-const RELAYER_ZK_DIR = '/home/sean/cipherpay-relayer-solana/src/zk/circuits';
+const CIRCUITS_BUILD_DIR = '/home/sean/cipherpaylab/cipherpay-circuits/build';
+const RELAYER_ZK_DIR = '/home/sean/cipherpaylab/cipherpay-relayer-solana/src/zk/circuits';
 
 // Circuit types and their corresponding file names
 const CIRCUITS = [

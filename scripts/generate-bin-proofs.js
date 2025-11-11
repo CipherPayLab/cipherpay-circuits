@@ -276,9 +276,6 @@ if (require.main === module) {
 
       if (pipelineArg) {
         const p = pipelineArg.split("=")[1].toUpperCase();
-        theMap: {
-          /* fallthrough guard for clarity */
-        }
         const map = { A: "", B: "1", C: "2", D: "3" };
         if (!(p in map)) throw new Error("Invalid --pipeline value. Use A, B, C, or D.");
         const circuits = circuitsForSuffix(map[p]);
@@ -320,8 +317,6 @@ module.exports = {
   convertOne,
   convertMany,
   _internals: {
-    convertProofToBinary,
-    convertPublicSignalsToBinary,
     parseG1,
     parseG2,
     le32,
