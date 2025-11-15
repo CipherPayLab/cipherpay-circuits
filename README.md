@@ -5,11 +5,12 @@ Zero-knowledge proof circuits for privacy-preserving payments with wallet-bound 
 Usage - refer to package.json
 
 ```bash
+npm install
 nvm use 18
 npm run setup
 npm run convert-vk-to-bin-anchor
 npm run copy-keys-to-relayer-and-anchor
-npm run copy-proofs-artifacts-to-relayer
+npm run copy-proof-artifacts-to-relayer-sdk
 
 npm run generate-proof
 npm run generate-bin-proofs
