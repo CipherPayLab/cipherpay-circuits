@@ -8,7 +8,7 @@
     "convert-vk-bin-to-anchor": "node scripts/convert-vk-bin-to-anchor.js --all",
 
     "copy-vk-to-relayer": "node scripts/copy-vk-to-relayer.js",
-    "copy-proof-artifacts-to-relayer-sdk": "node scripts/copy-proof-artifacts-to-relayer-sdk.js",
+    "copy-proof-artifacts-to-relayer-sdk-ui": "node scripts/copy-proof-artifacts-to-relayer-sdk-ui.js",
 
     "generate-example-proofs": "node scripts/generate-example-proofs.js all",
     "generate-bin-proofs": "node scripts/generate-bin-proofs.js --all",
