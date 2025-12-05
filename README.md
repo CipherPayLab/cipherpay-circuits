@@ -10,7 +10,7 @@ nvm use 18
 npm run setup
 npm run convert-vk-to-bin-anchor
 npm run copy-keys-to-relayer-and-anchor
-npm run copy-proof-artifacts-to-relayer-sdk
+npm run copy-proof-artifacts-to-relayer-sdk-ui
 
 npm run generate-proof
 npm run generate-bin-proofs

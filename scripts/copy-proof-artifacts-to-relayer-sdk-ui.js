@@ -21,13 +21,15 @@ const RELAYER_ROOT_DEFAULT =
   process.env.RELAYER_ROOT || path.resolve(CIRCUITS_ROOT, "../cipherpay-relayer-solana");
 const SDK_ROOT_DEFAULT =
   process.env.SDK_ROOT || path.resolve(CIRCUITS_ROOT, "../cipherpay-sdk");
-
+const UI_ROOT_DEFAULT =
+  process.env.UI_ROOT || path.resolve(CIRCUITS_ROOT, "../cipherpay-ui");
 
 const RELAYER_E2E_DIR =
   process.env.RELAYER_E2E_DIR || path.join(RELAYER_ROOT_DEFAULT, "tests/e2e");
 const SDK_CIRCUITS_DIR =
   process.env.SDK_CIRCUITS_DIR || path.join(SDK_ROOT_DEFAULT, "src/circuits");
-
+const UI_CIRCUITS_DIR =
+  process.env.UI_CIRCUITS_DIR || path.join(UI_ROOT_DEFAULT, "public/circuits");
 async function ensureDir(p) {
   await fsp.mkdir(p, { recursive: true });
 }
@@ -50,6 +52,7 @@ async function main() {
   console.log(`Source build: ${CIRCUITS_BUILD_DIR}`);
   console.log(`Destination Relayer: ${RELAYER_E2E_DIR}`);
   console.log(`Destination SDK: ${SDK_CIRCUITS_DIR}`);
+  console.log(`Destination UI: ${UI_CIRCUITS_DIR}`);
   console.log("");
 
   mustExist(CIRCUITS_BUILD_DIR);
@@ -59,6 +62,7 @@ async function main() {
     const wasmDir = path.join(srcDir, `${name}_js`);
     const dstDirRelayer = path.join(RELAYER_E2E_DIR, name, "proof");
     const dstDirSdk = path.join(SDK_CIRCUITS_DIR, name);
+    const dstDirUi = path.join(UI_CIRCUITS_DIR, name);
     // sources
     const wasmSrc = path.join(wasmDir, `${name}.wasm`);
     const zkeySrc = path.join(srcDir, `${name}_final.zkey`);
@@ -71,7 +75,9 @@ async function main() {
     const wasmDstSdk = path.join(dstDirSdk, `${name}.wasm`);
     const zkeyDstSdk = path.join(dstDirSdk, `${name}_final.zkey`);
     const vkeyDstSdk = path.join(dstDirSdk, `${name}_vkey.json`);
-
+    const wasmDstUi = path.join(dstDirUi, `${name}.wasm`);
+    const zkeyDstUi = path.join(dstDirUi, `${name}_final.zkey`);
+    const vkeyDstUi = path.join(dstDirUi, `${name}_vkey.json`);
     // sanity
     for (const p of [srcDir, wasmDir, wasmSrc, zkeySrc, vkeySrc]) {
       mustExist(p);
@@ -83,9 +89,13 @@ async function main() {
     await copyFile(zkeySrc, zkeyDstSdk);
     await copyFile(vkeySrc, vkeyDstRelayer);
     await copyFile(vkeySrc, vkeyDstSdk);
+    await copyFile(wasmSrc, wasmDstUi);
+    await copyFile(zkeySrc, zkeyDstUi);
+    await copyFile(vkeySrc, vkeyDstUi);
 
     console.log(`➜ ${name}: done -> ${dstDirRelayer}\n`);
     console.log(`➜ ${name}: done -> ${dstDirSdk}\n`);
+    console.log(`➜ ${name}: done -> ${dstDirUi}\n`);
   }
 
   console.log("All artifacts copied successfully ✅");
