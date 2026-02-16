@@ -36,6 +36,8 @@ npm run generate-proof
 - `deposit` - Public to shielded conversion with Merkle tree integration (6 signals)
 - `transfer` - Shielded transfers with encrypted note delivery (9 signals)
 - `withdraw` - Shielded to public conversion with identity verification (5 signals)
+- `audit_payment` - Selective disclosure for payment compliance (5 public + depth*2 private) ⭐ NEW
+- `audit_withdraw` - Selective disclosure for withdrawal compliance (4 public + 3 private) ⭐ NEW
 
 ### 2. `generate-zkey-vk.js` - ZKey and Verification Key Generation
 Dedicated script for generating zkey files and verification keys with advanced options.
@@ -80,6 +82,8 @@ node scripts/generate-example-proof.js deposit
 - `transfer` - Shielded transfers between users
 - `withdraw` - Withdrawals from shielded pool
 - `deposit` - Deposits into shielded pool with Merkle tree integration
+- `audit_payment` - Selective disclosure for payment compliance ⭐ NEW
+- `audit_withdraw` - Selective disclosure for withdrawal compliance ⭐ NEW
 
 **Generated files:**
 - `proof.json` - Zero-knowledge proof
@@ -411,6 +415,60 @@ newNextLeafIndex = nextLeafIndex + 1
 - **Selective Disclosure**: Optional audit trails for compliance
 - **Merkle Tree Verification**: Public verification of note inclusion
 - **Nullifier Tracking**: Public tracking of spent notes
+- **Audit Payment Circuit**: Prove transaction amount/purpose without revealing identity
+- **Audit Withdraw Circuit**: Verify withdrawal details without spending authority
+
+## Audit Circuits
+
+CipherPay includes two specialized audit circuits for compliance and regulatory requirements:
+
+### Audit Payment Circuit
+
+**Purpose**: Enable selective disclosure of payment details for compliance auditing.
+
+**Example Usage**:
+```bash
+# Generate example audit payment proof
+node scripts/generate-example-proof.js audit_payment
+
+# Generated inputs prove:
+# - Payment amount (disclosed)
+# - Token type (disclosed)
+# - Memo hash for invoice matching (disclosed)
+# - Commitment exists in Merkle tree (proven)
+# - Payer identity (PRIVATE - not disclosed)
+```
+
+**Use Cases**:
+- Tax reporting (charitable donations, business expenses)
+- Regulatory compliance audits
+- Legal discovery (selective transaction disclosure)
+- Business accounting verification
+
+### Audit Withdraw Circuit
+
+**Purpose**: Enable selective disclosure of withdrawal details without providing spending authority.
+
+**Example Usage**:
+```bash
+# Generate example audit withdraw proof
+node scripts/generate-example-proof.js audit_withdraw
+
+# Generated inputs prove:
+# - Withdrawal amount (disclosed)
+# - Nullifier matches on-chain event (proven)
+# - Memo hash for purpose verification (disclosed)
+# - Withdrawer identity (PRIVATE - not disclosed)
+# - NO spending authority granted (no walletPrivKey required)
+```
+
+**Use Cases**:
+- Supplier payment verification
+- Payroll audit trails
+- Forensic investigations
+- Compliance reporting
+
+**Key Difference from Regular Withdraw**: The audit circuit does NOT require `walletPrivKey`, meaning auditors can verify withdrawals without gaining spending authority over the nullifier.
 
 ## Performance Characteristics
 
@@ -418,6 +476,8 @@ newNextLeafIndex = nextLeafIndex + 1
 - **Transfer**: ~215 constraints
 - **Deposit**: ~214 constraints (with Merkle tree)
 - **Withdraw**: ~215 constraints
+- **Audit Payment**: ~4,500 constraints (with Merkle tree, similar to deposit)
+- **Audit Withdraw**: ~180 constraints (no Merkle tree, nullifier verification only)
 
 ### Proof Generation
 - **Time**: 2-5 seconds per proof (depending on hardware)

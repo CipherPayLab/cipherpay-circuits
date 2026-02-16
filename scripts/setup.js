@@ -40,7 +40,7 @@ async function setupCircuits() {
 
   console.log('🔧 Setting up CipherPay Circuits...');
 
-  const circuits = ['transfer', 'withdraw', 'deposit'];
+  const circuits = ['transfer', 'withdraw', 'deposit', 'audit_payment', 'audit_withdraw'];
   const repoRoot = path.join(__dirname, '..');
   const buildRoot = path.join(repoRoot, 'build');
 
