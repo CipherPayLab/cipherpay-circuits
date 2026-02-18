@@ -20,9 +20,9 @@ const CIRCUITS_BUILD_DIR =
 const RELAYER_ROOT_DEFAULT =
   process.env.RELAYER_ROOT || path.resolve(CIRCUITS_ROOT, "../cipherpay-relayer-solana");
 const SDK_ROOT_DEFAULT =
-  process.env.SDK_ROOT || path.resolve(CIRCUITS_ROOT, "../cipherpay-sdk");
+  process.env.SDK_ROOT || path.resolve(CIRCUITS_ROOT, "../cipherpay-app/packages/sdk");
 const UI_ROOT_DEFAULT =
-  process.env.UI_ROOT || path.resolve(CIRCUITS_ROOT, "../cipherpay-ui");
+  process.env.UI_ROOT || path.resolve(CIRCUITS_ROOT, "../cipherpay-app/packages/ui");
 const ZKAUDIT_ROOT_DEFAULT =
   process.env.ZKAUDIT_ROOT || path.resolve(CIRCUITS_ROOT, "../cipherpay-zkaudit");
 

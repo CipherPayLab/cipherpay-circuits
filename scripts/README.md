@@ -7,12 +7,6 @@ This directory contains utility scripts for building, testing, and managing Ciph
 ### 1. `setup.js` - Circuit Build and Setup
 Builds all core circuits and generates proving/verification keys.
 
-**Usage:**
-```bash
-nvm use 18   ### must use node v18
-npm run setup
-npm run generate-proof
-
 ```
 
 **What it does:**
