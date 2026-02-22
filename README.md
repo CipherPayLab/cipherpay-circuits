@@ -8,18 +8,147 @@ Usage - refer to package.json
 npm install
 nvm use 18
 npm run setup
-npm run convert-vk-to-bin-anchor
-npm run copy-keys-to-relayer-and-anchor
-npm run copy-proof-artifacts-to-relayer-sdk-ui
+npm run convert-vk-bin-to-anchor
+npm run copy-vk-to-relayer
+npm run copy-proof-artifacts-to-relayer-sdk-ui-zkaudit
 
-npm run generate-proof
+npm run generate-example-proofs
 npm run generate-bin-proofs
 
 ```
 
 ## Overview
 
-CipherPay circuits implement privacy-preserving payment functionality using Circom 2.1.4 and the Groth16 proving system. The circuits provide shielded transfers with wallet-bound identities, encrypted note delivery, and Merkle tree integration for enhanced privacy and security.
+CipherPay circuits implement privacy-preserving payment functionality using Circom 2.1.4 and the Groth16 proving system. The circuits provide shielded transfers with wallet-bound identities, encrypted note delivery, Merkle tree integration, and selective disclosure for compliance.
+
+### Circuit Suite
+
+CipherPay includes **5 specialized circuits**:
+
+1. **Deposit** - Convert public funds to shielded notes
+2. **Transfer** - Shielded transfers between users
+3. **Withdraw** - Convert shielded notes to public funds
+4. **Audit Payment** - Selective disclosure for payment compliance ⭐ NEW
+5. **Audit Withdraw** - Selective disclosure for withdrawal compliance ⭐ NEW
+
+### Key Features
+
+- 🔒 **Privacy**: Hide transaction amounts, senders, and receivers
+- 🔐 **Security**: Prevent double-spending with nullifiers
+- 🌳 **Merkle Trees**: Efficient note inclusion proofs
+- 📊 **Compliance**: Selective disclosure for auditing (audit circuits)
+- ⚡ **Performance**: Optimized constraint counts
+- 🔗 **Interoperable**: Solana and EVM support
+
+## Audit Circuits
+
+CipherPay includes specialized audit circuits that enable **selective disclosure** for compliance and regulatory requirements while preserving user privacy.
+
+### Design Philosophy
+
+Traditional privacy protocols face a dilemma: either provide complete anonymity (making compliance impossible) or reveal all transaction details (destroying privacy). CipherPay's audit circuits solve this by allowing users to selectively prove specific facts about their transactions without revealing sensitive information.
+
+### Audit Payment Circuit
+
+**Use Case**: Prove a payment occurred with a specific amount and purpose, without revealing payer identity.
+
+**Example Scenario**:
+```
+Alice paid $1000 to a charity and needs to claim a tax deduction.
+The auditor (IRS) needs to verify:
+✓ Payment amount: $1000
+✓ Payment purpose: "Charitable donation #12345"
+✗ Payer identity: PRIVATE
+✗ Full transaction history: PRIVATE
+```
+
+**How It Works**:
+1. Alice generates an audit proof using `audit_payment.circom`
+2. Public inputs: commitment, merkleRoot, amount=1000, tokenId, memoHash
+3. Private inputs: cipherPayPubKey (identity), randomness, memo
+4. The proof verifies:
+   - The commitment opens to the disclosed amount
+   - The commitment exists in the Merkle tree
+   - The memo hash matches the invoice/purpose
+5. Auditor can verify the proof without learning Alice's identity
+
+### Audit Withdraw Circuit
+
+**Use Case**: Prove a withdrawal occurred with specific details, without revealing user identity or providing spending authority.
+
+**Example Scenario**:
+```
+Bob withdrew funds to pay a supplier and needs to prove it for accounting.
+The auditor needs to verify:
+✓ Withdrawal amount: $5000
+✓ Withdrawal purpose: "Invoice #ABC123"
+✓ Nullifier matches on-chain WithdrawCompleted event
+✗ Withdrawer identity: PRIVATE
+✗ Spending authority: NOT GRANTED
+```
+
+**How It Works**:
+1. Bob generates an audit proof using `audit_withdraw.circom`
+2. Public inputs: nullifier, amount=5000, tokenId, memoHash
+3. Private inputs: cipherPayPubKey, randomness, memo
+4. The proof verifies:
+   - The nullifier matches the disclosed amount and purpose
+   - The nullifier is linked to the on-chain event
+5. Auditor can verify WITHOUT:
+   - Learning Bob's identity
+   - Getting Bob's walletPrivKey (no spending power)
+
+### Audit Workflow
+
+```
+1. User performs transaction (deposit/transfer/withdraw)
+   ↓
+2. Transaction recorded on-chain with commitment/nullifier
+   ↓
+3. User stores private note details locally
+   ↓
+4. When audit needed:
+   ↓
+5. User generates audit proof with selective disclosure
+   ↓
+6. User shares proof + public inputs with auditor
+   ↓
+7. Auditor verifies proof on-chain or off-chain
+   ↓
+8. Auditor confirms compliance WITHOUT seeing private details
+```
+
+### Privacy Guarantees
+
+**What Auditors CAN Verify**:
+- ✅ Transaction amount
+- ✅ Token type
+- ✅ Transaction inclusion in Merkle tree
+- ✅ Memo hash (for invoice/purpose matching)
+- ✅ Link to on-chain events (via commitment/nullifier)
+
+**What Auditors CANNOT Learn**:
+- ❌ User identity (cipherPayPubKey)
+- ❌ Note randomness
+- ❌ Original memo content (only hash disclosed)
+- ❌ Full transaction history
+- ❌ Relationships between transactions
+
+### Compliance Applications
+
+1. **Tax Reporting**: Prove charitable donations, business expenses
+2. **Regulatory Audits**: Demonstrate transaction legitimacy
+3. **Forensic Investigation**: Prove specific transactions occurred
+4. **Business Accounting**: Verify payroll, supplier payments
+5. **Legal Discovery**: Selective disclosure for court proceedings
+
+### Security Properties
+
+- **Zero-Knowledge**: Only disclosed facts are revealed
+- **Unforgeable**: Cannot fake proofs without private witness
+- **Non-Interactive**: Proofs can be verified independently
+- **Publicly Verifiable**: Anyone with verification key can check
+- **Selective**: User controls what to disclose
 
 ## Core Circuits
 
@@ -55,6 +184,60 @@ CipherPay circuits implement privacy-preserving payment functionality using Circ
   - Merkle tree inclusion proof verification
   - Commitment reconstruction and validation
   - Wallet-bound identity verification
+
+### Audit Payment Circuit (`audit_payment.circom`)
+
+**Purpose**: Selective disclosure circuit for auditing payment commitments without revealing identity
+
+- **Signals**: 5 public + 4 private (depth-dependent Merkle path)
+- **Key Features**:
+  - Proves commitment opens to disclosed `(amount, tokenId, memoHash)`
+  - Verifies commitment inclusion in Merkle tree under specified root
+  - Protects identity by keeping `cipherPayPubKey` private
+  - Enables compliance verification without compromising privacy
+  - Supports invoice/purpose auditing via memo hash binding
+
+**Public Inputs**:
+- `commitment` - The note commitment being audited
+- `merkleRoot` - Merkle root at time of transaction
+- `amount` - Transaction amount (disclosed)
+- `tokenId` - Token type (disclosed)
+- `memoHash` - Hash of memo for purpose verification
+
+**Private Witness**:
+- `cipherPayPubKey` - Owner identity (kept private)
+- `randomness` - Note randomness (kept private)
+- `memo` - Original memo (kept private, only hash disclosed)
+- `pathElements[depth]` - Merkle proof path
+- `pathIndices[depth]` - Merkle proof indices
+
+### Audit Withdraw Circuit (`audit_withdraw.circom`)
+
+**Purpose**: Selective disclosure circuit for auditing withdrawals without spending authority
+
+- **Signals**: 4 public + 3 private
+- **Key Features**:
+  - Proves nullifier matches disclosed `(amount, tokenId, memoHash)`
+  - Does NOT require `walletPrivKey` - audit-only, no spending power
+  - Links nullifier to on-chain `WithdrawCompleted` event
+  - Supports invoice/purpose verification via memo hash
+  - Enables compliance without revealing note details or identity
+
+**Public Inputs**:
+- `nullifier` - Must match `WithdrawCompleted.nullifier` on-chain
+- `amount` - Withdrawn amount (must match event)
+- `tokenId` - Token type
+- `memoHash` - Hash of memo for purpose verification
+
+**Private Witness**:
+- `cipherPayPubKey` - Owner identity (kept private)
+- `randomness` - Note randomness (kept private)
+- `memo` - Original memo (kept private, only hash disclosed)
+
+**Use Case**: Auditors can verify a withdrawal's amount and purpose without:
+- Gaining spending authority over the nullifier
+- Learning the note owner's identity
+- Accessing full transaction history
 
 ## Components
 
@@ -130,6 +313,9 @@ newNextLeafIndex = nextLeafIndex + 1;
 - **Selective Disclosure**: Optional audit trails for compliance
 - **Merkle Tree Verification**: Public verification of note inclusion
 - **Nullifier Tracking**: Public tracking of spent notes
+- **Audit Payment Circuit**: Prove transaction amount/purpose without revealing identity
+- **Audit Withdraw Circuit**: Verify withdrawal details without spending authority
+- **Compliance Ready**: Support for regulatory requirements via selective proofs
 
 ## Quick Start
 
@@ -286,6 +472,56 @@ Tests:       28 passed, 28 total
 }
 ```
 
+### Audit Payment Circuit (5 public + depth*2 private)
+
+```javascript
+{
+    // Public inputs (5 signals)
+    commitment: 7777777777,        // The note being audited
+    merkleRoot: 8888888888,        // Merkle root at transaction time
+    amount: 100,                   // Disclosed amount
+    tokenId: 1,                    // Disclosed token type
+    memoHash: 9999999999,          // Hash of memo (Poseidon(memo, 0))
+
+    // Private inputs (4 + depth*2 signals)
+    cipherPayPubKey: 2222222222,   // Owner identity (kept private)
+    randomness: 9876543210,        // Note randomness (kept private)
+    memo: 12345,                   // Original memo (kept private)
+    pathElements: Array(16).fill(0), // Merkle path
+    pathIndices: Array(16).fill(0)   // Path indices
+}
+```
+
+**Note**: This circuit enables compliance audits. An auditor can verify:
+- A payment of exactly 100 tokens occurred
+- The payment is included in the Merkle tree
+- The memo hash matches an invoice/purpose
+- WITHOUT learning the payer's identity
+
+### Audit Withdraw Circuit (4 public + 3 private)
+
+```javascript
+{
+    // Public inputs (4 signals)
+    nullifier: 3333333333,         // Must match WithdrawCompleted event
+    amount: 100,                   // Disclosed amount
+    tokenId: 1,                    // Token type
+    memoHash: 9999999999,          // Hash of memo
+
+    // Private inputs (3 signals)
+    cipherPayPubKey: 2222222222,   // Owner identity (kept private)
+    randomness: 9876543210,        // Note randomness (kept private)
+    memo: 12345                    // Original memo (kept private)
+}
+```
+
+**Note**: This circuit enables withdraw audits. An auditor can verify:
+- A withdrawal of exactly 100 tokens occurred
+- The nullifier matches the on-chain event
+- The memo hash matches an invoice/purpose
+- WITHOUT learning the withdrawer's identity
+- WITHOUT gaining spending authority (no walletPrivKey required)
+
 ## Performance Characteristics
 
 ### Circuit Complexity
@@ -293,6 +529,8 @@ Tests:       28 passed, 28 total
 - **Transfer**: ~215 constraints
 - **Deposit**: ~4,694 constraints (with Merkle tree)
 - **Withdraw**: ~215 constraints
+- **Audit Payment**: ~4,500 constraints (with Merkle tree, similar to deposit)
+- **Audit Withdraw**: ~180 constraints (no Merkle tree, nullifier verification only)
 
 ### Proof Generation
 
@@ -500,8 +738,11 @@ cipherpay-circuits/
 │   ├── transfer/
 │   ├── deposit/
 │   ├── withdraw/
+│   ├── audit_payment/           # NEW: Audit payment circuit
+│   ├── audit_withdraw/          # NEW: Audit withdraw circuit
 │   ├── note_commitment/
-│   └── nullifier/
+│   ├── nullifier/
+│   └── merkle/
 ├── test/                       # Test files
 │   ├── helpers.js
 │   ├── circuits.test.js
