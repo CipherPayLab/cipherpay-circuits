@@ -9,8 +9,8 @@ npm install
 nvm use 18
 npm run setup
 npm run convert-vk-bin-to-anchor
-npm run copy-vk-to-relayer
-npm run copy-proof-artifacts-to-relayer-sdk-ui-zkaudit
+npm run copy-vk-to-relayer-zkaudit
+npm run copy-proof-artifacts-to-relayer-sdk-ui
 
 npm run generate-example-proofs
 npm run generate-bin-proofs

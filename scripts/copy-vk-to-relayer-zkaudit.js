@@ -12,6 +12,7 @@ const fileURLToPath = require('url').fileURLToPath;
 // Source and destination paths
 const CIRCUITS_BUILD_DIR = '/home/sean/cipherpaylab/cipherpay-circuits/build';
 const RELAYER_ZK_DIR = '/home/sean/cipherpaylab/cipherpay-relayer-solana/src/zk/circuits';
+const ZKAUDIT_VK_DIR = '/home/sean/cipherpaylab/cipherpay-zkaudit/packages/proof-groth16/src/zk/circuits';
 
 // Circuit types and their corresponding file names
 const CIRCUITS = [
@@ -33,27 +34,40 @@ const copyVerificationKeys = async () => {
 
     for (const circuit of CIRCUITS) {
       const sourcePath = path.join(CIRCUITS_BUILD_DIR, circuit.type, 'verification_key.json');
-      const destPath = path.join(RELAYER_ZK_DIR, circuit.filename);
+      const relayerDestPath = path.join(RELAYER_ZK_DIR, circuit.filename);
+      const zkauditDestPath = path.join(ZKAUDIT_VK_DIR, circuit.filename);
 
       try {
         // Check if source file exists
         await fs.access(sourcePath);
         
         // Copy the file
-        await fs.copyFile(sourcePath, destPath);
+        await fs.copyFile(sourcePath, relayerDestPath);
+        await fs.copyFile(sourcePath, zkauditDestPath);
         
         // Verify the copy was successful
         const sourceStats = await fs.stat(sourcePath);
-        const destStats = await fs.stat(destPath);
+        const relayerStats = await fs.stat(relayerDestPath);
+        const zkauditStats = await fs.stat(zkauditDestPath);
         
-        if (sourceStats.size === destStats.size) {
+        if (sourceStats.size === relayerStats.size) {
           console.log(`✅ Copied ${circuit.type} verification key: ${circuit.filename}`);
           console.log(`   Source: ${sourcePath}`);
-          console.log(`   Destination: ${destPath}`);
-          console.log(`   Size: ${sourceStats.size} bytes\n`);
+          console.log(`   Relay Destination: ${relayerDestPath}`);
+          console.log(`   Relay Size: ${relayerStats.size} bytes\n`);
           successCount++;
         } else {
-          throw new Error(`File size mismatch: source=${sourceStats.size}, dest=${destStats.size}`);
+          throw new Error(`File size mismatch: source=${sourceStats.size}, relay=${relayerStats.size}`);
+        }
+        
+        if (sourceStats.size === zkauditStats.size) {
+          console.log(`✅ Copied ${circuit.type} verification key: ${circuit.filename}`);
+          console.log(`   Source: ${sourcePath}`);
+          console.log(`   Zkaudit Destination: ${zkauditDestPath}`);
+          console.log(`   Zkaudit Size: ${zkauditStats.size} bytes\n`);
+          successCount++;
+        } else {
+          throw new Error(`File size mismatch: source=${sourceStats.size}, zkaudit=${zkauditStats.size}`);
         }
       } catch (error) {
         if (error.code === 'ENOENT') {
