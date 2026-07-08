@@ -54,8 +54,8 @@ const bigToDec = (x) => x.toString(10);
 const exampleInputs = {
   // -------- Pipeline A --------
   deposit: {
-    ownerWalletPubKey: "0",
-    ownerWalletPrivKey: "0",
+    ownerCipherPayPubKey: "0",
+    ownerCipherPayPrivKey: "0",
     randomness: "0",
     tokenId: "0",
     memo: "0",
@@ -68,8 +68,8 @@ const exampleInputs = {
 
   transfer: {
     inAmount: "100",
-    inSenderWalletPubKey: "0",
-    inSenderWalletPrivKey: "0",
+    inSenderCipherPayPubKey: "0",
+    inSenderCipherPayPrivKey: "0",
     inRandomness: "0",
     inTokenId: "0",
     inMemo: "0",
@@ -109,8 +109,8 @@ const exampleInputs = {
 
   // -------- Pipeline B --------
   deposit1: {
-    ownerWalletPubKey: "0",
-    ownerWalletPrivKey: "0",
+    ownerCipherPayPubKey: "0",
+    ownerCipherPayPrivKey: "0",
     randomness: "1",
     tokenId: "0",
     memo: "0",
@@ -123,8 +123,8 @@ const exampleInputs = {
 
   transfer1: {
     inAmount: "200",
-    inSenderWalletPubKey: "0",
-    inSenderWalletPrivKey: "0",
+    inSenderCipherPayPubKey: "0",
+    inSenderCipherPayPrivKey: "0",
     inRandomness: "1",
     inTokenId: "0",
     inMemo: "0",
@@ -163,8 +163,8 @@ const exampleInputs = {
 
   // -------- Pipeline C --------
   deposit2: {
-    ownerWalletPubKey: "0",
-    ownerWalletPrivKey: "0",
+    ownerCipherPayPubKey: "0",
+    ownerCipherPayPrivKey: "0",
     randomness: "2",
     tokenId: "0",
     memo: "0",
@@ -177,8 +177,8 @@ const exampleInputs = {
 
   transfer2: {
     inAmount: "300",
-    inSenderWalletPubKey: "0",
-    inSenderWalletPrivKey: "0",
+    inSenderCipherPayPubKey: "0",
+    inSenderCipherPayPrivKey: "0",
     inRandomness: "2",
     inTokenId: "0",
     inMemo: "0",
@@ -217,8 +217,8 @@ const exampleInputs = {
 
   // -------- Pipeline D --------
   deposit3: {
-    ownerWalletPubKey: "0",
-    ownerWalletPrivKey: "0",
+    ownerCipherPayPubKey: "0",
+    ownerCipherPayPrivKey: "0",
     randomness: "3",
     tokenId: "0",
     memo: "0",
@@ -231,8 +231,8 @@ const exampleInputs = {
 
   transfer3: {
     inAmount: "400",
-    inSenderWalletPubKey: "0",
-    inSenderWalletPrivKey: "0",
+    inSenderCipherPayPubKey: "0",
+    inSenderCipherPayPrivKey: "0",
     inRandomness: "3",
     inTokenId: "0",
     inMemo: "0",
@@ -330,8 +330,8 @@ for (const base of ["deposit", "transfer", "withdraw"]) {
 /* ================== Whitelist the inputs per circuit ==================== */
 const ALLOWED_INPUTS = {
   deposit: new Set([
-    "ownerWalletPubKey",
-    "ownerWalletPrivKey",
+    "ownerCipherPayPubKey",
+    "ownerCipherPayPrivKey",
     "randomness",
     "tokenId",
     "memo",
@@ -345,8 +345,8 @@ const ALLOWED_INPUTS = {
   ]),
   transfer: new Set([
     "inAmount",
-    "inSenderWalletPubKey",
-    "inSenderWalletPrivKey",
+    "inSenderCipherPayPubKey",
+    "inSenderCipherPayPrivKey",
     "inRandomness",
     "inTokenId",
     "inMemo",
@@ -467,8 +467,8 @@ function withWithdrawDefaults(inp = {}) {
 /* ---- defaults for deposit/transfer (unchanged) ------------------------- */
 function withDepositDefaults(inp = {}) {
   return {
-    ownerWalletPubKey:   inp.ownerWalletPubKey   ?? "0",
-    ownerWalletPrivKey:  inp.ownerWalletPrivKey  ?? "0",
+    ownerCipherPayPubKey:   inp.ownerCipherPayPubKey   ?? "0",
+    ownerCipherPayPrivKey:  inp.ownerCipherPayPrivKey  ?? "0",
     randomness:          inp.randomness          ?? "0",
     tokenId:             inp.tokenId             ?? "0",
     memo:                inp.memo                ?? "0",
@@ -478,8 +478,8 @@ function withTransferDefaults(inp = {}) {
   const z = "0";
   return {
     inAmount:                 inp.inAmount                 ?? z,
-    inSenderWalletPubKey:     inp.inSenderWalletPubKey     ?? z,
-    inSenderWalletPrivKey:    inp.inSenderWalletPrivKey    ?? z,
+    inSenderCipherPayPubKey:     inp.inSenderCipherPayPubKey     ?? z,
+    inSenderCipherPayPrivKey:    inp.inSenderCipherPayPrivKey    ?? z,
     inRandomness:             inp.inRandomness             ?? z,
     inTokenId:                inp.inTokenId                ?? z,
     inMemo:                   inp.inMemo                   ?? z,
@@ -704,7 +704,7 @@ async function runDeposit(poseidon, depth, sharedTree, variant = "deposit") {
   const amount = inputs.amount ?? "0";
   const nonce  = inputs.nonce  ?? "0";
 
-  const ownerCipherPayPubKey = poseidon2(P.F, P, inputs.ownerWalletPubKey, inputs.ownerWalletPrivKey);
+  const ownerCipherPayPubKey = poseidon2(P.F, P, inputs.ownerCipherPayPubKey, inputs.ownerCipherPayPrivKey);
   const depositHash          = poseidon3(P.F, P, ownerCipherPayPubKey, amount, nonce);
 
   const filled = sanitizeInputs(variant, {

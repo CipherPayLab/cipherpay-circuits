@@ -35,8 +35,8 @@ function generateTransferInput() {
     const merkleData = generateSimpleMerkleTree(16);
     
     // Generate wallet keys
-    const inSenderWalletPubKey = 1234567890;
-    const inSenderWalletPrivKey = 1111111111;
+    const inSenderCipherPayPubKey = 1234567890;
+    const inSenderCipherPayPrivKey = 1111111111;
     
     // Generate output keys
     const out1RecipientCipherPayPubKey = 2222222222;
@@ -45,8 +45,8 @@ function generateTransferInput() {
     return {
         // Private inputs for input note
         inAmount: 100,
-        inSenderWalletPubKey: inSenderWalletPubKey,
-        inSenderWalletPrivKey: inSenderWalletPrivKey,
+        inSenderCipherPayPubKey: inSenderCipherPayPubKey,
+        inSenderCipherPayPrivKey: inSenderCipherPayPrivKey,
         inRandomness: 9876543210,
         inTokenId: 1,
         inMemo: 0,
@@ -72,17 +72,17 @@ function generateTransferInput() {
 
 // Generate valid deposit input structure
 function generateDepositInput() {
-    const ownerWalletPubKey = 1234567890;
-    const ownerWalletPrivKey = 1111111111;
-    const ownerCipherPayPubKey = deriveCipherPayPubKey(ownerWalletPubKey, ownerWalletPrivKey);
+    const ownerCipherPayPubKey = 1234567890;
+    const ownerCipherPayPrivKey = 1111111111;
+    const derivedOwnerCipherPayPubKey = deriveCipherPayPubKey(ownerCipherPayPubKey, ownerCipherPayPrivKey);
     const amount = 100;
     const nonce = 3333333333;
-    const depositHash = computeDepositHash(ownerCipherPayPubKey, amount, nonce);
+    const depositHash = computeDepositHash(derivedOwnerCipherPayPubKey, amount, nonce);
     
     return {
         // Private inputs
-        ownerWalletPubKey: ownerWalletPubKey,
-        ownerWalletPrivKey: ownerWalletPrivKey,
+        ownerCipherPayPubKey: ownerCipherPayPubKey,
+        ownerCipherPayPrivKey: ownerCipherPayPrivKey,
         randomness: 9876543210,
         tokenId: 1,
         memo: 0,
@@ -131,13 +131,15 @@ function generateNoteCommitmentInput() {
     };
 }
 
-// Generate valid nullifier input structure
+// Generate valid nullifier input structure (matches Nullifier() template inputs)
 function generateNullifierInput() {
     return {
-        ownerWalletPubKey: 1234567890,
-        ownerWalletPrivKey: 1111111111,
+        amount: 100,
+        cipherPayPubKey: 1234567890,
+        cipherPayPrivKey: 1111111111,
         randomness: 9876543210,
-        tokenId: 1
+        tokenId: 1,
+        memo: 0
     };
 }
 

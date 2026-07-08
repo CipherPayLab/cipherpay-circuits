@@ -6,18 +6,33 @@ include "../merkle/merkle.circom";               // MerkleProof(depth)
 include "../nullifier/nullifier.circom";         // Nullifier*, incl. FromCipherKey
 include "../note_commitment/note_commitment.circom"; // NoteCommitment, FromWallet
 
-// Transfer with 1 input note, 2 output notes, and append-2 Merkle updates
+// Transfer with 1 input note, 2 output notes, and append-2 Merkle updates.
+//
+// Note preimage (per Whitepaper Appendix A.6):
+//   commitment = Poseidon(amount, cipherPayPubKey, randomness,
+//                         tokenId, memo, Poseidon(pkEncLo, pkEncHi))
+// Every note consumed or produced here carries its own pk_enc limbs so
+// the input can be reconstructed and the outputs are cryptographically
+// bound to the recipients' Curve25519 encryption keys.
+//
 // Public signals (Circom 2): outputs first, then [encNote1Hash, encNote2Hash]
 // [ outCommitment1, outCommitment2, nullifier, merkleRoot,
 //   newMerkleRoot1, newMerkleRoot2, newNextLeafIndex, encNote1Hash, encNote2Hash ]
+// (encNote*Hash binds the ciphertext tag to outCommitment, which transitively
+//  includes pkEncHash -- so decryptability by the intended recipient is
+//  provable without adding more public signals.)
 template Transfer(depth) {
-    // === Private input note (5-field note preimage) ===
+    // === Private input note (now 6-field note preimage incl. pk_enc binding) ===
     signal input inAmount;
-    signal input inSenderWalletPubKey;
-    signal input inSenderWalletPrivKey;
+    signal input inSenderCipherPayPubKey;
+    signal input inSenderCipherPayPrivKey;
     signal input inRandomness;
     signal input inTokenId;
     signal input inMemo;
+    // Sender's own Curve25519 pubkey limbs (the one the note was created for).
+    // Needed to recompute the input commitment under the new binding design.
+    signal input inPkEncLo;
+    signal input inPkEncHi;
 
     // Membership proof for the input commitment
     signal input inPathElements[depth];     // siblings bottom -> top
@@ -29,6 +44,9 @@ template Transfer(depth) {
     signal input out1Randomness;
     signal input out1TokenId;
     signal input out1Memo;
+    // Recipient 1's Curve25519 pubkey limbs (bound into outCommitment1).
+    signal input out1PkEncLo;
+    signal input out1PkEncHi;
 
     // === Output note 2 (flexible recipient) ===
     signal input out2Amount;
@@ -36,6 +54,9 @@ template Transfer(depth) {
     signal input out2Randomness;
     signal input out2TokenId;
     signal input out2Memo;
+    // Recipient 2's Curve25519 pubkey limbs (bound into outCommitment2).
+    signal input out2PkEncLo;
+    signal input out2PkEncHi;
 
     // === Append two new leaves at consecutive positions ===
     signal input nextLeafIndex;             // index for outCommitment1 (private)
@@ -55,14 +76,41 @@ template Transfer(depth) {
     signal output newMerkleRoot2;           // AFTER inserting outCommitment2 at nextLeafIndex+1
     signal output newNextLeafIndex;         // == nextLeafIndex + 2
 
+    // -- Amount range checks: 0 < amount < 2^64 --
+    // Num2Bits(64) enforces amount fits in 64 bits (i.e. < 2^64).
+    // The inverse trick enforces amount != 0 (amount * inv === 1 is unsatisfiable when amount == 0).
+    component inAmountBits   = Num2Bits(64);
+    component out1AmountBits = Num2Bits(64);
+    component out2AmountBits = Num2Bits(64);
+    inAmountBits.in   <== inAmount;
+    out1AmountBits.in <== out1Amount;
+    out2AmountBits.in <== out2Amount;
+
+    signal inAmountInv;
+    signal out1AmountInv;
+    signal out2AmountInv;
+    inAmountInv   <-- 1 / inAmount;
+    out1AmountInv <-- 1 / out1Amount;
+    out2AmountInv <-- 1 / out2Amount;
+    inAmount   * inAmountInv   === 1;
+    out1Amount * out1AmountInv === 1;
+    out2Amount * out2AmountInv === 1;
+
     // -- Step 1: input note commitment (derive sender CipherPay pubkey internally) --
+    // Bind the sender's pk_enc into the reconstructed commitment so the input
+    // note matches the exact (identity + encryption) tuple it was minted with.
+    component inPkEnc = PoseidonPkEnc();
+    inPkEnc.pkEncLo <== inPkEncLo;
+    inPkEnc.pkEncHi <== inPkEncHi;
+
     component inNote = NoteCommitmentFromWallet();
     inNote.amount        <== inAmount;
-    inNote.walletPubKey  <== inSenderWalletPubKey;
-    inNote.walletPrivKey <== inSenderWalletPrivKey;
+    inNote.cipherPayPubKey  <== inSenderCipherPayPubKey;
+    inNote.cipherPayPrivKey <== inSenderCipherPayPrivKey;
     inNote.randomness    <== inRandomness;
     inNote.tokenId       <== inTokenId;
     inNote.memo          <== inMemo;
+    inNote.pkEncHash     <== inPkEnc.pkEncHash;
 
     signal inCommitment;
     inCommitment <== inNote.commitment;
@@ -77,12 +125,22 @@ template Transfer(depth) {
     merkleRoot <== mpIn.root;
 
     // -- Step 3: output notes (both can target arbitrary recipients) --
+    // Hash each recipient's pk_enc limbs with range checks.
+    component out1PkEnc = PoseidonPkEnc();
+    out1PkEnc.pkEncLo <== out1PkEncLo;
+    out1PkEnc.pkEncHi <== out1PkEncHi;
+
+    component out2PkEnc = PoseidonPkEnc();
+    out2PkEnc.pkEncLo <== out2PkEncLo;
+    out2PkEnc.pkEncHi <== out2PkEncHi;
+
     component outNote1 = NoteCommitment();
     outNote1.amount          <== out1Amount;
     outNote1.cipherPayPubKey <== out1RecipientCipherPayPubKey;
     outNote1.randomness      <== out1Randomness;
     outNote1.tokenId         <== out1TokenId;
     outNote1.memo            <== out1Memo;
+    outNote1.pkEncHash       <== out1PkEnc.pkEncHash;
     outCommitment1           <== outNote1.commitment;
 
     component outNote2 = NoteCommitment();
@@ -91,13 +149,18 @@ template Transfer(depth) {
     outNote2.randomness      <== out2Randomness;
     outNote2.tokenId         <== out2TokenId;
     outNote2.memo            <== out2Memo;
+    outNote2.pkEncHash       <== out2PkEnc.pkEncHash;
     outCommitment2           <== outNote2.commitment;
 
     // -- Step 4: nullifier (prevents double-spend of input note) --
+    // Preimage mirrors the input note commitment (minus pkEncHash) so the
+    // nullifier binds the full spent note, not just its (identity, r, token).
     component nul = NullifierFromCipherKey();
+    nul.amount          <== inAmount;
     nul.cipherPayPubKey <== inNote.derivedCipherPayPubKey;  // reuse derived CPPK
     nul.randomness      <== inRandomness;
     nul.tokenId         <== inTokenId;
+    nul.memo            <== inMemo;
     nullifier           <== nul.nullifier;
 
     // -- Step 5: conservation & token checks --

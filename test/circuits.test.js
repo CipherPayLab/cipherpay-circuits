@@ -13,8 +13,8 @@ describe('CipherPay Circuit Tests', () => {
             
             // Check input note signals
             expect(input.inAmount).toBe(100);
-            expect(input.inSenderWalletPubKey).toBe(1234567890);
-            expect(input.inSenderWalletPrivKey).toBe(1111111111);
+            expect(input.inSenderCipherPayPubKey).toBe(1234567890);
+            expect(input.inSenderCipherPayPrivKey).toBe(1111111111);
             expect(input.inRandomness).toBe(9876543210);
             expect(input.inTokenId).toBe(1);
             expect(input.inMemo).toBe(0);
@@ -46,7 +46,7 @@ describe('CipherPay Circuit Tests', () => {
             const signalCount = Object.keys(input).length;
             
             // Transfer circuit should have 19 signals:
-            // - 8 input note signals (inAmount, inSenderWalletPubKey, inSenderWalletPrivKey, inRandomness, inTokenId, inMemo, inPathElements[16], inPathIndices[16])
+            // - 8 input note signals (inAmount, inSenderCipherPayPubKey, inSenderCipherPayPrivKey, inRandomness, inTokenId, inMemo, inPathElements[16], inPathIndices[16])
             // - 10 output note signals (out1Amount, out1RecipientCipherPayPubKey, out1Randomness, out1TokenId, out1Memo, out2Amount, out2SenderCipherPayPubKey, out2Randomness, out2TokenId, out2Memo)
             // - 1 public input (encryptedNote)
             expect(signalCount).toBe(19);
@@ -56,8 +56,8 @@ describe('CipherPay Circuit Tests', () => {
             const input = generateTransferInput();
             
             // Check that wallet keys are present for identity derivation
-            expect(input.inSenderWalletPubKey).toBeDefined();
-            expect(input.inSenderWalletPrivKey).toBeDefined();
+            expect(input.inSenderCipherPayPubKey).toBeDefined();
+            expect(input.inSenderCipherPayPrivKey).toBeDefined();
             
             // Check that CipherPay pubkeys are provided for output notes
             expect(input.out1RecipientCipherPayPubKey).toBeDefined();
@@ -87,8 +87,8 @@ describe('CipherPay Circuit Tests', () => {
             const input = generateDepositInput();
             
             // Check private inputs
-            expect(input.ownerWalletPubKey).toBe(1234567890);
-            expect(input.ownerWalletPrivKey).toBe(1111111111);
+            expect(input.ownerCipherPayPubKey).toBe(1234567890);
+            expect(input.ownerCipherPayPrivKey).toBe(1111111111);
             expect(input.randomness).toBe(9876543210);
             expect(input.tokenId).toBe(1);
             expect(input.memo).toBe(0);
@@ -104,7 +104,7 @@ describe('CipherPay Circuit Tests', () => {
             const signalCount = Object.keys(input).length;
             
             // Deposit circuit should have 8 signals:
-            // - 5 private inputs (ownerWalletPubKey, ownerWalletPrivKey, randomness, tokenId, memo)
+            // - 5 private inputs (ownerCipherPayPubKey, ownerCipherPayPrivKey, randomness, tokenId, memo)
             // - 3 public inputs (amount, nonce, depositHash)
             expect(signalCount).toBe(8);
         });
@@ -182,19 +182,21 @@ describe('CipherPay Circuit Tests', () => {
         it('should have correct signal structure', () => {
             const input = generateNullifierInput();
             
-            expect(input.ownerWalletPubKey).toBe(1234567890);
-            expect(input.ownerWalletPrivKey).toBe(1111111111);
+            expect(input.amount).toBe(100);
+            expect(input.cipherPayPubKey).toBe(1234567890);
+            expect(input.cipherPayPrivKey).toBe(1111111111);
             expect(input.randomness).toBe(9876543210);
             expect(input.tokenId).toBe(1);
+            expect(input.memo).toBe(0);
         });
 
         it('should have correct signal count', () => {
             const input = generateNullifierInput();
             const signalCount = Object.keys(input).length;
             
-            // Nullifier component should have 4 signals:
-            // - 4 inputs (ownerWalletPubKey, ownerWalletPrivKey, randomness, tokenId)
-            expect(signalCount).toBe(4);
+            // Nullifier component should have 6 private inputs:
+            // amount, cipherPayPubKey, cipherPayPrivKey, randomness, tokenId, memo
+            expect(signalCount).toBe(6);
         });
     });
 
@@ -205,10 +207,10 @@ describe('CipherPay Circuit Tests', () => {
             const withdrawInput = generateWithdrawInput();
             
             // Check wallet-bound identity features
-            expect(transferInput.inSenderWalletPubKey).toBeDefined();
-            expect(transferInput.inSenderWalletPrivKey).toBeDefined();
-            expect(depositInput.ownerWalletPubKey).toBeDefined();
-            expect(depositInput.ownerWalletPrivKey).toBeDefined();
+            expect(transferInput.inSenderCipherPayPubKey).toBeDefined();
+            expect(transferInput.inSenderCipherPayPrivKey).toBeDefined();
+            expect(depositInput.ownerCipherPayPubKey).toBeDefined();
+            expect(depositInput.ownerCipherPayPrivKey).toBeDefined();
             expect(withdrawInput.recipientWalletPubKey).toBeDefined();
             expect(withdrawInput.recipientWalletPrivKey).toBeDefined();
         });
